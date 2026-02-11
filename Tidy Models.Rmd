@@ -1,19 +1,176 @@
 ---
 title: "Tidy Models"
 author: "Anwar Dahir"
-output: pdf_document
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-library('tidyverse') ; library('modeldata')
 ``` 
+
+
+```{r, warning=FALSE, message=FALSE, include=FALSE}
+library('tidyverse') ; library('modeldata')
+```
+
 
 ## Introduction
 
 This R Markdown document demonstrates my abilities to use models for data analysis using a data set collected on crickets.
 
+```{r load data, include = FALSE}
+data(crickets, package = "modeldata")
+names(crickets)
+```
+
+## What is that sound?
+
+In this report, we examine what factors predict a cricket's chirp rate.
+
+
+```{r summary, echo = FALSE}
+summary(crickets)
+ggplot(crickets, aes(x = rate)) +
+  geom_histogram(bins = 8) + 
+  ggtitle("Distribution of the chirp rate of crickets") +
+  xlab('Chirp rate (per min.)')
+```
+
+
+## Temperature affects chirp rate
+
+Based on a scatter plot of temperature and chirping, it seems that as temperature increases, the rate of chirping also increases.
+
+```{r temp, echo= FALSE}
+ggplot(crickets, aes(x = temp, y = rate)) +
+  geom_point() + 
+  geom_smooth(method = 'lm') +
+  ggtitle("Plot of temperature and chirp rate") +
+  ylab('Chirp rate (per min.)') +
+  xlab('Temperature (Celsius)')
+
+temp_lm <- lm(rate ~ temp, crickets)
+
+summary.lm(temp_lm)
+```
+
+Based on a scatter plot of temperature and chirping and a correlation test, it seems that as temperature increases one degree, the rate of chirping increases about 4.2 chirps per minute.
+
+## Species-specific effects of temperature on chirping
+
+
+```{r species, echo= FALSE}
+ggplot(crickets, aes(x = temp, y = rate, color = species)) +
+  geom_point() + 
+  geom_smooth(method = 'lm') +
+  ggtitle("Plot of temperature and chirp rate for two species of crickets") +
+  ylab('Chirp rate (per min.)') +
+  xlab('Temperature (Celsius)')
+  
+  
+species_lm <- lm(rate ~ temp + species, crickets)
+
+summary.lm(species_lm)
+```
+
+
+The graph shows that for both type of species there is a positive relationship between temperature and chirp rate. The model summary shows that both the predictors are statistically significant and the R square for the model is 0.9896.
+
+## Interactions
+
+```{r species historgram, echo = FALSE}
+ggplot(crickets, aes(x = rate, fill = species)) +
+  geom_histogram(position = 'identity', alpha = 0.7, bins = 8) + 
+  ggtitle("Distribution of the chirp rate of crickets") +
+  xlab('Chirp rate (per min.)')
+```
+```{r interactions, echo= FALSE}
+ggplot(crickets, aes(x = temp, y = rate, color = species)) +
+  geom_point() + 
+  geom_smooth(method = 'lm') +
+  ggtitle("Plot of temperature and chirp rate for two species of crickets") +
+  ylab('Chirp rate (per min.)') +
+  xlab('Temperature (Celsius)')
+  
+species_x_temp_lm <- lm(rate ~ temp + species + temp:species, crickets) 
+summary.lm(species_x_temp_lm)
+
+anova(species_lm, species_x_temp_lm)
+```
+The data is checked for ineractions but finally, it is decided to stay wit the original model.
+
+
+# Diamonds Data Analysis
+
+The scatter plot shows that the carat and price has a positive relationship while the boxplot shows that the average price is highest for premium cut.
+
+```{r, message=FALSE}
+diamonds <- ggplot2::diamonds
+
+p1 <- ggplot(diamonds, aes(x = carat, y = price)) +
+  geom_point(alpha = 0.2) +
+  geom_smooth(method = "lm", color = "red") +
+  labs(title = "Diamond Price vs Carat",
+       x = "Carat",
+       y = "Price") +
+  theme_minimal()
+
+p2 <- ggplot(diamonds, aes(x = cut, y = price, fill = cut)) +
+  geom_boxplot() +
+  labs(title = "Diamond Price by Cut Quality",
+       x = "Cut",
+       y = "Price") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+gridExtra::grid.arrange(p1, p2, nrow = 1)
+```
+
+The correlation plot shows that all variables has strong positive correlation with rspect to price except depth and table.
+
 ```{r}
+# Select numeric variables
+numeric_vars <- diamonds %>%
+  select(price, carat, depth, table, x, y, z)
+
+# Compute correlation matrix
+cor_matrix <- cor(numeric_vars)
+
+# Plot heatmap
+corrplot::corrplot(cor_matrix, method = "color", type = "upper",
+         tl.cex = 0.8, addCoef.col = "black")
+```
+
+
+The model is fitted with carat, cut, clarity and color as independent variables to predict the price. The model shows that the R square is 91.59%.
+
+```{r}
+# Using carat (continuous) + cut + clarity + color
+model <- lm(price ~ carat + cut + clarity + color, 
+            data = diamonds)
+
+# View model summary
+summary(model)
+```
+
+
+Checking the assumptions of the model shows that the assumption of linearity and normality are violated.
+
+```{r}
+# Check model diagnostics
+par(mfrow = c(2,2))
+plot(model)
+```
+
+This is the model with only numeric columns as the predictors. The model shows that except "z", all predictors are statistically significant with R square of 85.92% for the model.
+
+```{r}
+model_numeric <- lm(price ~ carat + depth + table + x + y + z, 
+                    data = diamonds)
+
+summary(model_numeric)
 
 ```
 
